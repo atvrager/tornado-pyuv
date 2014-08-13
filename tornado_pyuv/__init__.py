@@ -34,7 +34,7 @@ class Waker(object):
 class UVLoop(IOLoop):
 
     def initialize(self):
-        self._loop = pyuv.Loop()
+        self._loop = pyuv.Loop().default_loop()
         self._handlers = {}
         self._callbacks = []
         self._callback_lock = thread.allocate_lock()
@@ -64,6 +64,7 @@ class UVLoop(IOLoop):
         self._loop = None
 
     def add_handler(self, fd, handler, events):
+        fd, obj = self.split_fd(fd)
         if fd in self._handlers:
             raise IOError("fd %d already registered" % fd)
         poll = pyuv.Poll(self._loop, fd)
@@ -77,6 +78,7 @@ class UVLoop(IOLoop):
         poll.start(poll_events, self._handle_poll_events)
 
     def update_handler(self, fd, events):
+        fd, obj = self.split_fd(fd)
         poll = self._handlers[fd]
         poll_events = 0
         if events & IOLoop.READ:
@@ -86,6 +88,7 @@ class UVLoop(IOLoop):
         poll.start(poll_events, self._handle_poll_events)
 
     def remove_handler(self, fd):
+        fd, obj = self.split_fd(fd)
         poll = self._handlers.pop(fd, None)
         if poll is not None:
             poll.close()
